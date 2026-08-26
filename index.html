@@ -17,43 +17,56 @@
                 OPEN THE BOX 
                 <span id="active-title-badge" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-semibold">Materi Default</span>
             </h1>
-            <p class="text-xs text-slate-400 mt-0.5">
-                Mode: <span id="current-mode" class="font-bold text-white">STANDARD</span> | 
-                Giliran: <span id="current-turn-display" class="font-bold text-amber-400">Tim 1</span> |
-                Total Tim: <span id="total-teams-display" class="font-bold text-emerald-400">10</span>
+            <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                <span>Mode: <strong id="current-mode" class="text-white">STANDARD</strong></span> | 
+                <span>Giliran: <strong id="current-turn-display" class="text-amber-400">Tim 1</strong></span> |
+                <span>Total Tim: <strong id="total-teams-display" class="text-emerald-400">10</strong></span> |
+                <span>Status: <strong id="user-role-badge" class="text-slate-400 font-extrabold uppercase">Guest 👁️</strong></span>
             </p>
         </div>
 
-        <!-- Quick Controls Tim & Mode Presets -->
+        <!-- Panel Kontrol Game (Terpisah untuk Guest vs Admin) -->
         <div class="flex flex-wrap gap-2 items-center">
-            <!-- Kontrol Cepat Jumlah Tim -->
-            <div class="bg-slate-900/80 p-1 rounded-lg border border-slate-700 flex items-center gap-1.5 px-2 text-xs">
-                <span class="text-slate-400 font-bold">Tim:</span>
-                <button onclick="changeTeamCount(-1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">-</button>
-                <span id="team-count-badge" class="font-extrabold text-white px-1">10</span>
-                <button onclick="changeTeamCount(1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">+</button>
-            </div>
-
-            <!-- Device Sync -->
-            <div class="bg-slate-900/80 p-1 rounded-lg border border-slate-700 flex gap-1 text-xs">
-                <button onclick="setDeviceMode('SYNC')" id="btn-device-sync" class="px-2 py-1 rounded font-bold bg-indigo-600 text-white">📱 Host & Mobile</button>
-                <button onclick="setDeviceMode('HOST_ONLY')" id="btn-device-host" class="px-2 py-1 rounded font-bold text-slate-400 hover:text-white">🖥️ Host Only</button>
-            </div>
-
-            <!-- Preset Soal -->
-            <div class="flex gap-1">
-                <button onclick="setupGame('FULL')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs font-bold">100% Soal</button>
-                <button onclick="setupGame('STANDARD')" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold">Standard</button>
-                <button onclick="setupGame('PARTY')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 rounded text-xs font-bold">Party</button>
-            </div>
-
-            <!-- Setting & End Game Buttons -->
-            <button onclick="openSettingsModal()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-bold border border-slate-600 flex items-center gap-1">
-                ⚙️ Bank Soal & Setting
+            
+            <!-- Tombol Login / Logout Role -->
+            <button id="btn-login-admin" onclick="openLoginModal()" class="px-3 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold border border-amber-500 flex items-center gap-1">
+                🔑 Login Admin
             </button>
-            <button onclick="confirmEndGame()" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-xs font-bold border border-rose-500 flex items-center gap-1 shadow-md">
-                🛑 Akhiri Game
+            <button id="btn-logout-admin" onclick="logoutAdmin()" class="hidden px-3 py-1 bg-slate-700 hover:bg-slate-600 text-rose-300 rounded text-xs font-bold border border-slate-600">
+                🔒 Lock Admin
             </button>
+
+            <!-- KONTROL KHUSUS ADMIN (Hidden untuk Guest) -->
+            <div id="admin-controls" class="hidden flex flex-wrap gap-2 items-center">
+                <!-- Kontrol Jumlah Tim -->
+                <div class="bg-slate-900/80 p-1 rounded-lg border border-slate-700 flex items-center gap-1.5 px-2 text-xs">
+                    <span class="text-slate-400 font-bold">Tim:</span>
+                    <button onclick="changeTeamCount(-1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">-</button>
+                    <span id="team-count-badge" class="font-extrabold text-white px-1">10</span>
+                    <button onclick="changeTeamCount(1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">+</button>
+                </div>
+
+                <!-- Device Sync -->
+                <div class="bg-slate-900/80 p-1 rounded-lg border border-slate-700 flex gap-1 text-xs">
+                    <button onclick="setDeviceMode('SYNC')" id="btn-device-sync" class="px-2 py-1 rounded font-bold bg-indigo-600 text-white">📱 Sync</button>
+                    <button onclick="setDeviceMode('HOST_ONLY')" id="btn-device-host" class="px-2 py-1 rounded font-bold text-slate-400 hover:text-white">🖥️ Host</button>
+                </div>
+
+                <!-- Preset Soal -->
+                <div class="flex gap-1">
+                    <button onclick="setupGame('FULL')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs font-bold">100% Soal</button>
+                    <button onclick="setupGame('STANDARD')" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold">Standard</button>
+                    <button onclick="setupGame('PARTY')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 rounded text-xs font-bold">Party</button>
+                </div>
+
+                <!-- Setting Bank Soal -->
+                <button onclick="openSettingsModal()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs font-bold border border-indigo-400 flex items-center gap-1">
+                    ⚙️ Bank Soal & Setting
+                </button>
+                <button onclick="confirmEndGame()" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-xs font-bold border border-rose-500 flex items-center gap-1 shadow-md">
+                    🛑 Akhiri Game
+                </button>
+            </div>
         </div>
     </header>
 
@@ -61,6 +74,23 @@
     <main id="boxes-grid" class="grid grid-cols-5 gap-3 my-auto max-w-5xl mx-auto w-full">
         <!-- Generated by JS -->
     </main>
+
+    <!-- Modal Login Admin -->
+    <div id="login-modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-slate-800 p-6 rounded-2xl max-w-sm w-full border border-slate-700 shadow-2xl text-center">
+            <h2 class="text-lg font-bold text-amber-400 mb-2">🔐 Akses Admin Game</h2>
+            <p class="text-xs text-slate-400 mb-4">Masukkan Passcode untuk membuka pengaturan & bank soal.</p>
+            
+            <input type="password" id="admin-pass-input" onkeydown="if(event.key === 'Enter') verifyAdminLogin()" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-center text-white font-bold mb-3 focus:outline-none focus:border-amber-500 tracking-widest text-lg" placeholder="••••••••">
+            
+            <p id="login-error-msg" class="hidden text-xs text-rose-400 font-bold mb-3">⚠️ Kode Sandi Salah!</p>
+
+            <div class="flex gap-2">
+                <button onclick="closeLoginModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-xs">Batal</button>
+                <button onclick="verifyAdminLogin()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold rounded-lg text-xs">Masuk</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Soal / Bonus / Zonk & Action -->
     <div id="modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
@@ -70,7 +100,7 @@
             
             <div id="modal-content" class="text-lg font-semibold mb-3 min-h-[80px] flex items-center justify-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 whitespace-pre-wrap text-left"></div>
             
-            <!-- Kunci Jawaban -->
+            <!-- Kunci Jawaban (Sembunyi otomatis untuk Guest jika opsi dikunci) -->
             <div id="modal-answer-wrapper" class="hidden mb-4">
                 <button id="btn-toggle-key" onclick="toggleAnswerKey()" class="px-4 py-2 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 rounded-lg text-xs font-bold text-amber-300 transition-none cursor-pointer">
                     👁️ Lihat Kunci Jawaban
@@ -106,7 +136,7 @@
         </div>
     </div>
 
-    <!-- Modal Setting & Pengelola Bank Soal -->
+    <!-- Modal Setting & Pengelola Bank Soal (Admin Only) -->
     <div id="settings-modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-slate-800 p-6 rounded-2xl max-w-3xl w-full border border-slate-700 shadow-2xl max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
@@ -115,7 +145,7 @@
             </div>
 
             <div class="overflow-y-auto space-y-4 pr-2 flex-1 text-sm">
-                <!-- Fitur Simpan & Muat Materi Soal -->
+                <!-- Simpan & Muat Materi Soal -->
                 <div class="bg-indigo-950/40 p-4 rounded-xl border border-indigo-500/30">
                     <h3 class="text-xs font-extrabold text-indigo-300 uppercase tracking-wider mb-2">📁 Manajemen Bank Soal / Materi Saved</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
@@ -199,6 +229,66 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const ADMIN_HASH = "8095ca1d0d931beaa2b291d9c1584ea0599bb9dbb3bfaebff6230f8ec94b15f0"; 
+        async function hashPassword(str) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        let isAdmin = false;
+
+        function updateRoleUI() {
+            const roleBadge = document.getElementById('user-role-badge');
+            const btnLogin = document.getElementById('btn-login-admin');
+            const btnLogout = document.getElementById('btn-logout-admin');
+            const adminControls = document.getElementById('admin-controls');
+
+            if (isAdmin) {
+                roleBadge.innerText = "Admin 🛠️";
+                roleBadge.className = "text-amber-400 font-extrabold uppercase";
+                btnLogin.classList.add('hidden');
+                btnLogout.classList.remove('hidden');
+                adminControls.classList.remove('hidden');
+            } else {
+                roleBadge.innerText = "Guest 👁️";
+                roleBadge.className = "text-slate-400 font-extrabold uppercase";
+                btnLogin.classList.remove('hidden');
+                btnLogout.classList.add('hidden');
+                adminControls.classList.add('hidden');
+            }
+        }
+
+        function openLoginModal() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('admin-pass-input').value = '';
+            document.getElementById('login-error-msg').classList.add('hidden');
+            document.getElementById('admin-pass-input').focus();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').classList.add('hidden');
+        }
+
+        async function verifyAdminLogin() {
+            const inputPass = document.getElementById('admin-pass-input').value;
+            const hashedInput = await hashPassword(inputPass);
+
+            if (hashedInput === ADMIN_HASH) {
+                isAdmin = true;
+                updateRoleUI();
+                closeLoginModal();
+            } else {
+                document.getElementById('login-error-msg').classList.remove('hidden');
+            }
+        }
+
+        function logoutAdmin() {
+            isAdmin = false;
+            updateRoleUI();
+        }
 
         // Audio Effects
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -244,6 +334,8 @@
         let allTeamsData = {};
 
         function setupGame(mode = 'STANDARD') {
+            if (!isAdmin) return; // Mencegah Guest mengeksekusi reset
+
             let totalInput = rawQuestions.length;
             let boxes = [];
             let soalCount = totalInput;
@@ -286,10 +378,13 @@
             });
         }
 
-        // Realtime Listener & Recovery otomatis (Mati Listrik / Auto Restore)
+        // Realtime Listener & State Handler
         db.ref('game_state').on('value', snapshot => {
             const data = snapshot.val();
-            if(!data) { setupGame(); return; }
+            if(!data) { 
+                if (isAdmin) setupGame(); 
+                return; 
+            }
 
             currentTitle = data.title || "Materi Default";
             deviceMode = data.deviceMode || 'SYNC';
@@ -317,19 +412,20 @@
             }
         });
 
-        // Akhiri Game & Reset ke Tampilan Awal
         function confirmEndGame() {
-            if (confirm("Apakah Anda yakin ingin mengakhiri game sekarang? Skor akan di-reset ke 0 untuk memulai sesi game baru.")) {
+            if (!isAdmin) return;
+            if (confirm("Apakah Anda yakin ingin mengakhiri game sekarang? Skor akan di-reset ke 0 untuk memulai sesi baru.")) {
                 setupGame('STANDARD');
             }
         }
 
-        // Manajemen Bank Soal / Judul Materi (LocalStorage)
+        // Manajemen Bank Soal / Judul Materi
         function getSavedBanks() {
             return JSON.parse(localStorage.getItem('open_box_saved_banks') || '{}');
         }
 
         function saveCurrentBank() {
+            if (!isAdmin) return;
             const titleInput = document.getElementById('game-title-input').value.trim();
             if (!titleInput) {
                 alert("Masukkan Judul Materi terlebih dahulu!");
@@ -340,7 +436,7 @@
             const lines = val ? val.split('\n').filter(line => line.trim() !== '') : [];
 
             if (lines.length === 0) {
-                alert("Kotak teks soal tidak boleh kosong saat menyimpan bank soal!");
+                alert("Kotak teks soal tidak boleh kosong!");
                 return;
             }
 
@@ -380,6 +476,7 @@
         }
 
         function deleteSelectedBank() {
+            if (!isAdmin) return;
             const title = document.getElementById('saved-banks-select').value;
             if (!title) {
                 alert("Pilih judul materi yang ingin dihapus!");
@@ -396,6 +493,7 @@
         }
 
         function changeTeamCount(delta) {
+            if (!isAdmin) return;
             let newCount = config.teamCount + delta;
             if (newCount >= 2 && newCount <= 20) {
                 config.teamCount = newCount;
@@ -582,6 +680,7 @@
         }
 
         function setDeviceMode(mode) {
+            if (!isAdmin) return;
             db.ref('game_state/deviceMode').set(mode);
         }
 
@@ -605,6 +704,7 @@
         }
 
         function openSettingsModal() {
+            if (!isAdmin) return;
             renderBankOptions();
             document.getElementById('settings-modal').classList.remove('hidden');
             document.getElementById('game-title-input').value = currentTitle;
@@ -624,6 +724,7 @@
         }
 
         function saveSettings() {
+            if (!isAdmin) return;
             const titleInput = document.getElementById('game-title-input').value.trim();
             currentTitle = titleInput || "Materi Tanpa Judul";
 
@@ -653,6 +754,9 @@
             setupGame();
             alert(`Game "${currentTitle}" siap dimainkan dengan ${config.teamCount} tim!`);
         }
+
+        // Init UI Role awal sebagai Guest
+        updateRoleUI();
     </script>
 </body>
 </html>
