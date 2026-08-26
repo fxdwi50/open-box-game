@@ -64,6 +64,8 @@
         function updateTeamOptions(count) {
             const select = document.getElementById('team-select');
             if (select.children.length === count) return;
+            
+            const selectedVal = select.value || 'team_1';
             select.innerHTML = '';
             for(let i = 1; i <= count; i++) {
                 const opt = document.createElement('option');
@@ -71,7 +73,8 @@
                 opt.innerText = `Tim ${i}`;
                 select.appendChild(opt);
             }
-            select.value = currentTeam;
+            select.value = parseInt(selectedVal.replace('team_', '')) <= count ? selectedVal : 'team_1';
+            currentTeam = select.value;
         }
 
         function switchTeam() {
