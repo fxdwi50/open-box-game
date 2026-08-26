@@ -13,8 +13,11 @@
     <!-- Header & Kontrol Utama -->
     <header class="flex flex-wrap justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-xl mb-4 gap-3">
         <div>
-            <h1 class="text-2xl font-black text-amber-400 tracking-wider">OPEN THE BOX</h1>
-            <p class="text-xs text-slate-400">
+            <h1 class="text-2xl font-black text-amber-400 tracking-wider flex items-center gap-2">
+                OPEN THE BOX 
+                <span id="active-title-badge" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-semibold">Materi Default</span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-0.5">
                 Mode: <span id="current-mode" class="font-bold text-white">STANDARD</span> | 
                 Giliran: <span id="current-turn-display" class="font-bold text-amber-400">Tim 1</span> |
                 Total Tim: <span id="total-teams-display" class="font-bold text-emerald-400">10</span>
@@ -44,9 +47,12 @@
                 <button onclick="setupGame('PARTY')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 rounded text-xs font-bold">Party</button>
             </div>
 
-            <!-- Setting Button -->
+            <!-- Setting & End Game Buttons -->
             <button onclick="openSettingsModal()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-bold border border-slate-600 flex items-center gap-1">
-                ⚙️ Setting & Input Soal
+                ⚙️ Bank Soal & Setting
+            </button>
+            <button onclick="confirmEndGame()" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-xs font-bold border border-rose-500 flex items-center gap-1 shadow-md">
+                🛑 Akhiri Game
             </button>
         </div>
     </header>
@@ -64,7 +70,7 @@
             
             <div id="modal-content" class="text-lg font-semibold mb-3 min-h-[80px] flex items-center justify-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 whitespace-pre-wrap text-left"></div>
             
-            <!-- Kunci Jawaban (Tanpa Penundaan/Instant Toggle) -->
+            <!-- Kunci Jawaban -->
             <div id="modal-answer-wrapper" class="hidden mb-4">
                 <button id="btn-toggle-key" onclick="toggleAnswerKey()" class="px-4 py-2 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 rounded-lg text-xs font-bold text-amber-300 transition-none cursor-pointer">
                     👁️ Lihat Kunci Jawaban
@@ -74,7 +80,7 @@
                 </div>
             </div>
 
-            <!-- Notifikasi Penjawab Aktif / Rebut -->
+            <!-- Notifikasi Penjawab Aktif -->
             <div id="modal-buzz-alert" class="hidden mb-4 p-3 bg-amber-600/20 border border-amber-500/50 rounded-xl text-amber-300 font-bold text-sm">
                 📢 GILIRAN MENJAWAB: <span id="buzz-team-name" class="text-amber-400 font-extrabold underline">TIM 1</span>
             </div>
@@ -82,9 +88,7 @@
             <!-- Panel Pilihan Tim untuk Lempar Pertanyaan -->
             <div id="steal-team-selector" class="hidden mb-4 p-3 bg-slate-900/80 border border-amber-500/50 rounded-xl">
                 <p class="text-xs font-bold text-amber-400 mb-2">PILIH TIM YANG SIAP MEREBUT PERTANYAAN:</p>
-                <div id="steal-team-buttons" class="flex flex-wrap gap-1.5 justify-center max-h-36 overflow-y-auto">
-                    <!-- Dynamic Team Buttons -->
-                </div>
+                <div id="steal-team-buttons" class="flex flex-wrap gap-1.5 justify-center max-h-36 overflow-y-auto"></div>
             </div>
 
             <!-- Action Buttons Soal -->
@@ -102,15 +106,36 @@
         </div>
     </div>
 
-    <!-- Modal Setting & Textarea Chatbox Soal -->
+    <!-- Modal Setting & Pengelola Bank Soal -->
     <div id="settings-modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-slate-800 p-6 rounded-2xl max-w-2xl w-full border border-slate-700 shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="bg-slate-800 p-6 rounded-2xl max-w-3xl w-full border border-slate-700 shadow-2xl max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
-                <h2 class="text-lg font-bold text-amber-400">⚙️ Pengaturan & Fast Input Soal</h2>
+                <h2 class="text-lg font-bold text-amber-400">⚙️ Bank Soal & Pengaturan Materi Game</h2>
                 <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
             </div>
 
             <div class="overflow-y-auto space-y-4 pr-2 flex-1 text-sm">
+                <!-- Fitur Simpan & Muat Materi Soal -->
+                <div class="bg-indigo-950/40 p-4 rounded-xl border border-indigo-500/30">
+                    <h3 class="text-xs font-extrabold text-indigo-300 uppercase tracking-wider mb-2">📁 Manajemen Bank Soal / Materi Saved</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                        <input type="text" id="game-title-input" class="sm:col-span-2 bg-slate-900 border border-slate-600 rounded p-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-amber-400" placeholder="Judul Materi (Contoh: Kuis IPS Kelas 8 Bab 1)">
+                        <button onclick="saveCurrentBank()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded transition-all">
+                            💾 Simpan Materi Ini
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <label class="text-xs text-slate-400 font-bold">Panggil Materi Saved:</label>
+                        <select id="saved-banks-select" onchange="loadSelectedBank()" class="bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-bold flex-1">
+                            <option value="">-- Pilih Judul Soal Tersimpan --</option>
+                        </select>
+                        <button onclick="deleteSelectedBank()" class="bg-rose-900/40 hover:bg-rose-600 text-rose-300 hover:text-white text-xs px-2.5 py-1.5 rounded border border-rose-500/30 transition-all">
+                            🗑️ Hapus
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Config Aturan Game -->
                 <div class="grid grid-cols-2 gap-3 bg-slate-900/50 p-4 rounded-xl border border-slate-700">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Jumlah Tim Peserta (2-20):</label>
@@ -134,6 +159,7 @@
                     </div>
                 </div>
 
+                <!-- Fast Input Textarea Soal -->
                 <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
                     <div class="flex justify-between items-center mb-1">
                         <label class="block text-xs font-bold text-amber-400">💬 Input Soal Fast Mode (1 Baris = 1 Soal):</label>
@@ -146,7 +172,7 @@
             </div>
 
             <div class="mt-4 pt-3 border-t border-slate-700 flex justify-end gap-2">
-                <button onclick="saveSettings()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-sm">Simpan & Reset Game</button>
+                <button onclick="saveSettings()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-sm">Simpan & Reset Match Baru</button>
             </div>
         </div>
     </div>
@@ -203,9 +229,10 @@
             } catch(e) {}
         }
 
+        let currentTitle = "Materi IPS Default";
         let rawQuestions = Array.from({length: 20}, (_, i) => ({
-            text: `Pertanyaan contoh nomor ${i + 1}?`,
-            answer: `Kunci Jawaban ${i + 1}`
+            text: `Pertanyaan contoh IPS nomor ${i + 1}?`,
+            answer: `Kunci Jawaban IPS ${i + 1}`
         }));
 
         let config = { timerDuration: 60, correctPoints: 100, penaltyPoints: 0, teamCount: 10, showKey: true };
@@ -245,6 +272,7 @@
             }
 
             db.ref('game_state').set({
+                title: currentTitle,
                 mode: mode,
                 deviceMode: deviceMode,
                 boxes: boxes,
@@ -258,16 +286,19 @@
             });
         }
 
+        // Realtime Listener & Recovery otomatis (Mati Listrik / Auto Restore)
         db.ref('game_state').on('value', snapshot => {
             const data = snapshot.val();
             if(!data) { setupGame(); return; }
 
+            currentTitle = data.title || "Materi Default";
             deviceMode = data.deviceMode || 'SYNC';
             currentTurnTeam = data.currentTurn || 'team_1';
             answeringTeam = data.answeringTeam || currentTurnTeam;
             allTeamsData = data.teams || {};
             if(data.config) config = data.config;
 
+            document.getElementById('active-title-badge').innerText = currentTitle;
             document.getElementById('current-mode').innerText = data.mode;
             document.getElementById('team-count-badge').innerText = config.teamCount;
             document.getElementById('total-teams-display').innerText = config.teamCount;
@@ -285,6 +316,84 @@
                 closeModalUI();
             }
         });
+
+        // Akhiri Game & Reset ke Tampilan Awal
+        function confirmEndGame() {
+            if (confirm("Apakah Anda yakin ingin mengakhiri game sekarang? Skor akan di-reset ke 0 untuk memulai sesi game baru.")) {
+                setupGame('STANDARD');
+            }
+        }
+
+        // Manajemen Bank Soal / Judul Materi (LocalStorage)
+        function getSavedBanks() {
+            return JSON.parse(localStorage.getItem('open_box_saved_banks') || '{}');
+        }
+
+        function saveCurrentBank() {
+            const titleInput = document.getElementById('game-title-input').value.trim();
+            if (!titleInput) {
+                alert("Masukkan Judul Materi terlebih dahulu!");
+                return;
+            }
+
+            const val = document.getElementById('bulk-questions-input').value.trim();
+            const lines = val ? val.split('\n').filter(line => line.trim() !== '') : [];
+
+            if (lines.length === 0) {
+                alert("Kotak teks soal tidak boleh kosong saat menyimpan bank soal!");
+                return;
+            }
+
+            const banks = getSavedBanks();
+            banks[titleInput] = lines;
+            localStorage.setItem('open_box_saved_banks', JSON.stringify(banks));
+            currentTitle = titleInput;
+
+            renderBankOptions();
+            document.getElementById('saved-banks-select').value = titleInput;
+            alert(`Bank Soal "${titleInput}" berhasil disimpan!`);
+        }
+
+        function renderBankOptions() {
+            const banks = getSavedBanks();
+            const select = document.getElementById('saved-banks-select');
+            select.innerHTML = '<option value="">-- Pilih Judul Soal Tersimpan --</option>';
+            Object.keys(banks).forEach(title => {
+                const opt = document.createElement('option');
+                opt.value = title;
+                opt.innerText = title;
+                select.appendChild(opt);
+            });
+        }
+
+        function loadSelectedBank() {
+            const title = document.getElementById('saved-banks-select').value;
+            if (!title) return;
+
+            const banks = getSavedBanks();
+            if (banks[title]) {
+                document.getElementById('game-title-input').value = title;
+                document.getElementById('bulk-questions-input').value = banks[title].join('\n');
+                updateDetectedCount();
+                currentTitle = title;
+            }
+        }
+
+        function deleteSelectedBank() {
+            const title = document.getElementById('saved-banks-select').value;
+            if (!title) {
+                alert("Pilih judul materi yang ingin dihapus!");
+                return;
+            }
+
+            if (confirm(`Hapus bank soal "${title}" dari penyimpanan?`)) {
+                const banks = getSavedBanks();
+                delete banks[title];
+                localStorage.setItem('open_box_saved_banks', JSON.stringify(banks));
+                renderBankOptions();
+                document.getElementById('game-title-input').value = '';
+            }
+        }
 
         function changeTeamCount(delta) {
             let newCount = config.teamCount + delta;
@@ -409,7 +518,6 @@
             closeModal();
         }
 
-        // TOGGLE KUNCI JAWABAN (Instan Tanpa Wait/Delay)
         function toggleAnswerKey() {
             const keyContent = document.getElementById('modal-answer-key');
             const btnToggle = document.getElementById('btn-toggle-key');
@@ -422,7 +530,6 @@
             }
         }
 
-        // Buka / Tutup Selector Tim Perebut
         function toggleStealSelector() {
             const selector = document.getElementById('steal-team-selector');
             if (!selector.classList.contains('hidden')) {
@@ -447,7 +554,6 @@
             playSound('buzz');
         }
 
-        // Alihkan Tim Menjawab ke Tim Perebut pilihan
         function assignStealTeam(teamKey) {
             answeringTeam = teamKey;
             db.ref('game_state/answeringTeam').set(teamKey);
@@ -499,7 +605,9 @@
         }
 
         function openSettingsModal() {
+            renderBankOptions();
             document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('game-title-input').value = currentTitle;
             document.getElementById('cfg-timer').value = config.timerDuration;
             document.getElementById('cfg-points').value = config.correctPoints;
             document.getElementById('cfg-penalty').value = config.penaltyPoints;
@@ -516,6 +624,9 @@
         }
 
         function saveSettings() {
+            const titleInput = document.getElementById('game-title-input').value.trim();
+            currentTitle = titleInput || "Materi Tanpa Judul";
+
             config.timerDuration = parseInt(document.getElementById('cfg-timer').value) || 60;
             config.correctPoints = parseInt(document.getElementById('cfg-points').value) || 100;
             config.penaltyPoints = parseInt(document.getElementById('cfg-penalty').value) || 0;
@@ -540,7 +651,7 @@
 
             closeSettingsModal();
             setupGame();
-            alert(`Game diperbarui dengan ${config.teamCount} tim dan ${lines.length} kotak!`);
+            alert(`Game "${currentTitle}" siap dimainkan dengan ${config.teamCount} tim!`);
         }
     </script>
 </body>
