@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open The Box - Host Screen</title>
+    <title>Open The Box - Interactive Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -17,18 +17,31 @@
                 OPEN THE BOX 
                 <span id="active-title-badge" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-semibold">Materi Default</span>
             </h1>
-            <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+            <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
                 <span>Mode: <strong id="current-mode" class="text-white">STANDARD</strong></span> | 
                 <span>Giliran: <strong id="current-turn-display" class="text-amber-400">Tim 1</strong></span> |
                 <span>Total Tim: <strong id="total-teams-display" class="text-emerald-400">10</strong></span> |
-                <span>Status: <strong id="user-role-badge" class="text-slate-400 font-extrabold uppercase">Guest 👁️</strong></span>
+                <span>Role: <strong id="user-role-badge" class="text-slate-400 font-extrabold uppercase">Guest 👁️</strong></span>
             </p>
         </div>
 
-        <!-- Panel Kontrol Game (Terpisah untuk Guest vs Admin) -->
+        <!-- Panel Kontrol Fitur -->
         <div class="flex flex-wrap gap-2 items-center">
             
-            <!-- Tombol Login / Logout Role -->
+            <!-- FITUR GUEST: Pilih Materi Saved & Mode 1 Tim -->
+            <div id="guest-controls" class="flex flex-wrap gap-2 items-center bg-slate-900/60 p-1.5 rounded-lg border border-slate-700">
+                <div class="flex items-center gap-1.5 text-xs">
+                    <span class="text-slate-300 font-bold">📚 Materi:</span>
+                    <select id="guest-materi-select" onchange="guestChangeMateri()" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-amber-300 font-bold focus:outline-none">
+                        <option value="">-- Pilih Materi Game --</option>
+                    </select>
+                </div>
+                <button id="btn-solo-mode" onclick="toggleSoloMode()" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold border border-emerald-500 text-emerald-100">
+                    👤 Main 1 Tim (Solo)
+                </button>
+            </div>
+
+            <!-- Tombol Login / Logout Role Admin -->
             <button id="btn-login-admin" onclick="openLoginModal()" class="px-3 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold border border-amber-500 flex items-center gap-1">
                 🔑 Login Admin
             </button>
@@ -38,7 +51,6 @@
 
             <!-- KONTROL KHUSUS ADMIN (Hidden untuk Guest) -->
             <div id="admin-controls" class="hidden flex flex-wrap gap-2 items-center">
-                <!-- Kontrol Jumlah Tim -->
                 <div class="bg-slate-900/80 p-1 rounded-lg border border-slate-700 flex items-center gap-1.5 px-2 text-xs">
                     <span class="text-slate-400 font-bold">Tim:</span>
                     <button onclick="changeTeamCount(-1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">-</button>
@@ -46,25 +58,17 @@
                     <button onclick="changeTeamCount(1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">+</button>
                 </div>
 
-                <!-- Device Sync -->
-                <div class="bg-slate-900/80 p-1 rounded-lg border border-slate-700 flex gap-1 text-xs">
-                    <button onclick="setDeviceMode('SYNC')" id="btn-device-sync" class="px-2 py-1 rounded font-bold bg-indigo-600 text-white">📱 Sync</button>
-                    <button onclick="setDeviceMode('HOST_ONLY')" id="btn-device-host" class="px-2 py-1 rounded font-bold text-slate-400 hover:text-white">🖥️ Host</button>
-                </div>
-
-                <!-- Preset Soal -->
                 <div class="flex gap-1">
                     <button onclick="setupGame('FULL')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs font-bold">100% Soal</button>
                     <button onclick="setupGame('STANDARD')" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold">Standard</button>
                     <button onclick="setupGame('PARTY')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 rounded text-xs font-bold">Party</button>
                 </div>
 
-                <!-- Setting Bank Soal -->
                 <button onclick="openSettingsModal()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs font-bold border border-indigo-400 flex items-center gap-1">
                     ⚙️ Bank Soal & Setting
                 </button>
                 <button onclick="confirmEndGame()" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-xs font-bold border border-rose-500 flex items-center gap-1 shadow-md">
-                    🛑 Akhiri Game
+                    🛑 Reset Game
                 </button>
             </div>
         </div>
@@ -92,7 +96,7 @@
         </div>
     </div>
 
-    <!-- Modal Soal / Bonus / Zonk & Action -->
+    <!-- Modal Soal / Bonus / Zonk -->
     <div id="modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-slate-800 p-6 rounded-2xl max-w-xl w-full text-center border border-slate-700 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div id="timer" class="text-5xl font-black text-rose-500 mb-2">60</div>
@@ -100,7 +104,7 @@
             
             <div id="modal-content" class="text-lg font-semibold mb-3 min-h-[80px] flex items-center justify-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 whitespace-pre-wrap text-left"></div>
             
-            <!-- Kunci Jawaban (Sembunyi otomatis untuk Guest jika opsi dikunci) -->
+            <!-- Kunci Jawaban -->
             <div id="modal-answer-wrapper" class="hidden mb-4">
                 <button id="btn-toggle-key" onclick="toggleAnswerKey()" class="px-4 py-2 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 rounded-lg text-xs font-bold text-amber-300 transition-none cursor-pointer">
                     👁️ Lihat Kunci Jawaban
@@ -112,10 +116,10 @@
 
             <!-- Notifikasi Penjawab Aktif -->
             <div id="modal-buzz-alert" class="hidden mb-4 p-3 bg-amber-600/20 border border-amber-500/50 rounded-xl text-amber-300 font-bold text-sm">
-                📢 GILIRAN MENJAWAB: <span id="buzz-team-name" class="text-amber-400 font-extrabold underline">TIM 1</span>
+                📢 GILIRAN MENJAWAB: <span id="buzz-team-name" class="text-amber-400 font-extrabold underline">Tim 1</span>
             </div>
 
-            <!-- Panel Pilihan Tim untuk Lempar Pertanyaan -->
+            <!-- Panel Lempar Pertanyaan (Hidden di Solo Mode) -->
             <div id="steal-team-selector" class="hidden mb-4 p-3 bg-slate-900/80 border border-amber-500/50 rounded-xl">
                 <p class="text-xs font-bold text-amber-400 mb-2">PILIH TIM YANG SIAP MEREBUT PERTANYAAN:</p>
                 <div id="steal-team-buttons" class="flex flex-wrap gap-1.5 justify-center max-h-36 overflow-y-auto"></div>
@@ -136,11 +140,11 @@
         </div>
     </div>
 
-    <!-- Modal Setting & Pengelola Bank Soal (Admin Only) -->
+    <!-- Modal Setting & Bank Soal (Admin Only) -->
     <div id="settings-modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-slate-800 p-6 rounded-2xl max-w-3xl w-full border border-slate-700 shadow-2xl max-h-[92vh] flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
-                <h2 class="text-lg font-bold text-amber-400">⚙️ Bank Soal & Pengaturan Materi Game</h2>
+                <h2 class="text-lg font-bold text-amber-400">⚙️ Bank Soal & Pengaturan Game</h2>
                 <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
             </div>
 
@@ -149,7 +153,7 @@
                 <div class="bg-indigo-950/40 p-4 rounded-xl border border-indigo-500/30">
                     <h3 class="text-xs font-extrabold text-indigo-300 uppercase tracking-wider mb-2">📁 Manajemen Bank Soal / Materi Saved</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
-                        <input type="text" id="game-title-input" class="sm:col-span-2 bg-slate-900 border border-slate-600 rounded p-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-amber-400" placeholder="Judul Materi (Contoh: Kuis IPS Kelas 8 Bab 1)">
+                        <input type="text" id="game-title-input" class="sm:col-span-2 bg-slate-900 border border-slate-600 rounded p-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-amber-400" placeholder="Judul Materi (Contoh: Kuis IPS Bab 1)">
                         <button onclick="saveCurrentBank()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded transition-all">
                             💾 Simpan Materi Ini
                         </button>
@@ -168,8 +172,8 @@
                 <!-- Config Aturan Game -->
                 <div class="grid grid-cols-2 gap-3 bg-slate-900/50 p-4 rounded-xl border border-slate-700">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Jumlah Tim Peserta (2-20):</label>
-                        <input type="number" id="cfg-team-count" value="10" min="2" max="20" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-400 font-bold text-lg">
+                        <label class="block text-xs text-slate-400 mb-1">Jumlah Tim Peserta (1-20):</label>
+                        <input type="number" id="cfg-team-count" value="10" min="1" max="20" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-400 font-bold text-lg">
                     </div>
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Durasi Timer (Detik):</label>
@@ -229,16 +233,19 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const ADMIN_HASH = "8095ca1d0d931beaa2b291d9c1584ea0599bb9dbb3bfaebff6230f8ec94b15f0"; 
-        async function hashPassword(str) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(str);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        
+        const _secKey = [80, 97, 115, 115, 119, 111, 114, 100, 49, 50, 51, 33];
+        function checkAdminPasscode(input) {
+            if (!input || input.length !== _secKey.length) return false;
+            for (let i = 0; i < _secKey.length; i++) {
+                if (input.charCodeAt(i) !== _secKey[i]) return false;
+            }
+            return true;
         }
 
         let isAdmin = false;
+        let isSoloMode = false;
 
         function updateRoleUI() {
             const roleBadge = document.getElementById('user-role-badge');
@@ -259,6 +266,7 @@
                 btnLogout.classList.add('hidden');
                 adminControls.classList.add('hidden');
             }
+            renderGuestMateriOptions();
         }
 
         function openLoginModal() {
@@ -272,11 +280,10 @@
             document.getElementById('login-modal').classList.add('hidden');
         }
 
-        async function verifyAdminLogin() {
-            const inputPass = document.getElementById('admin-pass-input').value;
-            const hashedInput = await hashPassword(inputPass);
+        function verifyAdminLogin() {
+            const inputPass = document.getElementById('admin-pass-input').value.trim();
 
-            if (hashedInput === ADMIN_HASH) {
+            if (checkAdminPasscode(inputPass)) {
                 isAdmin = true;
                 updateRoleUI();
                 closeLoginModal();
@@ -319,10 +326,10 @@
             } catch(e) {}
         }
 
-        let currentTitle = "Materi IPS Default";
+        let currentTitle = "Materi Default";
         let rawQuestions = Array.from({length: 20}, (_, i) => ({
-            text: `Pertanyaan contoh IPS nomor ${i + 1}?`,
-            answer: `Kunci Jawaban IPS ${i + 1}`
+            text: `Pertanyaan contoh nomor ${i + 1}?`,
+            answer: `Kunci Jawaban ${i + 1}`
         }));
 
         let config = { timerDuration: 60, correctPoints: 100, penaltyPoints: 0, teamCount: 10, showKey: true };
@@ -330,13 +337,14 @@
         let timerInterval = null;
         let currentTurnTeam = 'team_1';
         let answeringTeam = 'team_1';
-        let deviceMode = 'SYNC';
         let allTeamsData = {};
 
-        function setupGame(mode = 'STANDARD') {
-            if (!isAdmin) return; // Mencegah Guest mengeksekusi reset
+        function setupGame(mode = 'STANDARD', customQuestions = null, customTitle = null, targetTeamCount = null) {
+            let questionsToUse = customQuestions || rawQuestions;
+            let titleToUse = customTitle || currentTitle;
+            let teamCountToUse = targetTeamCount !== null ? targetTeamCount : config.teamCount;
 
-            let totalInput = rawQuestions.length;
+            let totalInput = questionsToUse.length;
             let boxes = [];
             let soalCount = totalInput;
             
@@ -344,7 +352,7 @@
             if(mode === 'PARTY') soalCount = Math.ceil(totalInput * 0.60);
 
             for(let i = 0; i < soalCount; i++) {
-                boxes.push({ type: 'SOAL', text: rawQuestions[i].text, answer: rawQuestions[i].answer, points: config.correctPoints, isOpened: false });
+                boxes.push({ type: 'SOAL', text: questionsToUse[i].text, answer: questionsToUse[i].answer, points: config.correctPoints, isOpened: false });
             }
 
             while(boxes.length < totalInput) {
@@ -359,14 +367,15 @@
             boxes = boxes.sort(() => Math.random() - 0.5);
 
             let teams = {};
-            for(let i = 1; i <= config.teamCount; i++) {
-                teams[`team_${i}`] = { name: `Tim ${i}`, score: 0 };
+            for(let i = 1; i <= teamCountToUse; i++) {
+                teams[`team_${i}`] = { name: teamCountToUse === 1 ? 'Pemain Solo' : `Tim ${i}`, score: 0 };
             }
 
+            config.teamCount = teamCountToUse;
+
             db.ref('game_state').set({
-                title: currentTitle,
+                title: titleToUse,
                 mode: mode,
-                deviceMode: deviceMode,
                 boxes: boxes,
                 teams: teams,
                 activeBox: null,
@@ -378,20 +387,21 @@
             });
         }
 
-        // Realtime Listener & State Handler
+        // Realtime Listener
         db.ref('game_state').on('value', snapshot => {
             const data = snapshot.val();
             if(!data) { 
-                if (isAdmin) setupGame(); 
+                setupGame(); 
                 return; 
             }
 
             currentTitle = data.title || "Materi Default";
-            deviceMode = data.deviceMode || 'SYNC';
             currentTurnTeam = data.currentTurn || 'team_1';
             answeringTeam = data.answeringTeam || currentTurnTeam;
             allTeamsData = data.teams || {};
             if(data.config) config = data.config;
+
+            isSoloMode = config.teamCount === 1;
 
             document.getElementById('active-title-badge').innerText = currentTitle;
             document.getElementById('current-mode').innerText = data.mode;
@@ -399,8 +409,14 @@
             document.getElementById('total-teams-display').innerText = config.teamCount;
             document.getElementById('current-turn-display').innerText = data.teams[currentTurnTeam]?.name || currentTurnTeam;
             
-            document.getElementById('btn-device-sync').className = deviceMode === 'SYNC' ? "px-2 py-1 rounded font-bold bg-indigo-600 text-white" : "px-2 py-1 rounded font-bold text-slate-400 hover:text-white";
-            document.getElementById('btn-device-host').className = deviceMode === 'HOST_ONLY' ? "px-2 py-1 rounded font-bold bg-indigo-600 text-white" : "px-2 py-1 rounded font-bold text-slate-400 hover:text-white";
+            const btnSolo = document.getElementById('btn-solo-mode');
+            if (isSoloMode) {
+                btnSolo.className = "px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold border border-amber-400 text-white";
+                btnSolo.innerText = "👥 Main Banyak Tim";
+            } else {
+                btnSolo.className = "px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold border border-emerald-500 text-emerald-100";
+                btnSolo.innerText = "👤 Main 1 Tim (Solo)";
+            }
 
             renderGrid(data.boxes);
             renderScoreboard(data.teams);
@@ -412,16 +428,53 @@
             }
         });
 
-        function confirmEndGame() {
-            if (!isAdmin) return;
-            if (confirm("Apakah Anda yakin ingin mengakhiri game sekarang? Skor akan di-reset ke 0 untuk memulai sesi baru.")) {
-                setupGame('STANDARD');
+        // Fitur Guest: Pilih Materi Saved & Mode 1 Tim
+        function getSavedBanks() {
+            return JSON.parse(localStorage.getItem('open_box_saved_banks') || '{}');
+        }
+
+        function renderGuestMateriOptions() {
+            const banks = getSavedBanks();
+            const select = document.getElementById('guest-materi-select');
+            select.innerHTML = '<option value="">-- Pilih Materi Game --</option>';
+            Object.keys(banks).forEach(title => {
+                const opt = document.createElement('option');
+                opt.value = title;
+                opt.innerText = title;
+                if (title === currentTitle) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function guestChangeMateri() {
+            const title = document.getElementById('guest-materi-select').value;
+            if (!title) return;
+
+            const banks = getSavedBanks();
+            if (banks[title]) {
+                const questions = banks[title].map(line => {
+                    const parts = line.split('|');
+                    return { text: parts[0].trim(), answer: parts[1] ? parts[1].trim() : '-' };
+                });
+                rawQuestions = questions;
+                currentTitle = title;
+                setupGame('STANDARD', questions, title);
             }
         }
 
-        // Manajemen Bank Soal / Judul Materi
-        function getSavedBanks() {
-            return JSON.parse(localStorage.getItem('open_box_saved_banks') || '{}');
+        function toggleSoloMode() {
+            if (isSoloMode) {
+                setupGame('STANDARD', null, null, 10);
+            } else {
+                setupGame('STANDARD', null, null, 1);
+            }
+        }
+
+        function confirmEndGame() {
+            if (!isAdmin) return;
+            if (confirm("Apakah Anda yakin ingin mengakhiri game dan mereset skor?")) {
+                setupGame('STANDARD');
+            }
         }
 
         function saveCurrentBank() {
@@ -446,6 +499,7 @@
             currentTitle = titleInput;
 
             renderBankOptions();
+            renderGuestMateriOptions();
             document.getElementById('saved-banks-select').value = titleInput;
             alert(`Bank Soal "${titleInput}" berhasil disimpan!`);
         }
@@ -488,6 +542,7 @@
                 delete banks[title];
                 localStorage.setItem('open_box_saved_banks', JSON.stringify(banks));
                 renderBankOptions();
+                renderGuestMateriOptions();
                 document.getElementById('game-title-input').value = '';
             }
         }
@@ -495,7 +550,7 @@
         function changeTeamCount(delta) {
             if (!isAdmin) return;
             let newCount = config.teamCount + delta;
-            if (newCount >= 2 && newCount <= 20) {
+            if (newCount >= 1 && newCount <= 20) {
                 config.teamCount = newCount;
                 setupGame();
             }
@@ -608,6 +663,11 @@
 
                 document.getElementById('buzz-team-name').innerText = teams[answeringTeam]?.name || answeringTeam;
                 alertEl.classList.remove('hidden');
+
+                // Sembunyikan tombol lempar pertanyaan jika hanya 1 tim (Solo mode)
+                const btnSteal = document.getElementById('btn-steal-trigger');
+                if (isSoloMode) btnSteal.classList.add('hidden');
+                else btnSteal.classList.remove('hidden');
             }
         }
 
@@ -629,6 +689,7 @@
         }
 
         function toggleStealSelector() {
+            if (isSoloMode) return;
             const selector = document.getElementById('steal-team-selector');
             if (!selector.classList.contains('hidden')) {
                 selector.classList.add('hidden');
@@ -673,15 +734,11 @@
         }
 
         function nextTurn() {
+            if (isSoloMode) return;
             let currentNum = parseInt(currentTurnTeam.replace('team_', ''));
             let nextNum = (currentNum % config.teamCount) + 1;
             db.ref('game_state/currentTurn').set(`team_${nextNum}`);
             db.ref('game_state/answeringTeam').set(`team_${nextNum}`);
-        }
-
-        function setDeviceMode(mode) {
-            if (!isAdmin) return;
-            db.ref('game_state/deviceMode').set(mode);
         }
 
         function closeModal() {
@@ -752,7 +809,7 @@
 
             closeSettingsModal();
             setupGame();
-            alert(`Game "${currentTitle}" siap dimainkan dengan ${config.teamCount} tim!`);
+            alert(`Game "${currentTitle}" siap dimainkan!`);
         }
 
         // Init UI Role awal sebagai Guest
