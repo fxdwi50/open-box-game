@@ -1,839 +1,265 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open The Box - Interactive Game</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open The Box Game</title>
+  
+  <!-- Firebase App & Realtime Database SDK (v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { margin: 0; padding: 20px; background: #f4f7f6; color: #333; }
+    .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h1, h2 { text-align: center; color: #2c3e50; }
+    
+    /* Connection Status */
+    #connectionStatus {
+      display: none;
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      padding: 8px 16px;
+      background: #e74c3c;
+      color: white;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      z-index: 9999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Grid Kotak */
+    .boxes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; margin: 20px 0; }
+    .box-card { height: 100px; background: #3498db; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: transform 0.2s, background 0.2s; }
+    .box-card:hover { transform: scale(1.05); }
+    .box-card.opened { background: #bdc3c7; color: #7f8c8d; cursor: not-allowed; opacity: 0.7; }
+
+    /* Control Panel */
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; justify-content: center; }
+    button { padding: 10px 16px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btn-primary { background: #2ecc71; color: white; }
+    .btn-warning { background: #f39c12; color: white; }
+    .btn-danger { background: #e74c3c; color: white; }
+    
+    /* Timer Display */
+    .timer-display { font-size: 32px; text-align: center; font-weight: bold; color: #e74c3c; margin: 15px 0; }
+    
+    /* Input Area */
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+  </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen p-4 flex flex-col justify-between select-none">
+<body>
 
-    <!-- Header & Kontrol Utama -->
-    <header class="flex flex-wrap justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-xl mb-4 gap-3">
-        <div>
-            <h1 class="text-2xl font-black text-amber-400 tracking-wider flex items-center gap-2">
-                OPEN THE BOX 
-                <span id="active-title-badge" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-semibold">Materi Default</span>
-            </h1>
-            <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                <span>Mode: <strong id="current-mode" class="text-white">STANDARD</strong></span> | 
-                <span>Giliran: <strong id="current-turn-display" class="text-amber-400">Tim 1</strong></span> |
-                <span>Total Tim: <strong id="total-teams-display" class="text-emerald-400">10</strong></span> |
-                <span>Role: <strong id="user-role-badge" class="text-slate-400 font-extrabold uppercase">Guest 👁️</strong></span>
-            </p>
-        </div>
+  <!-- Indikator Status Koneksi Offline -->
+  <div id="connectionStatus">⚠️ Koneksi Terputus... Menyambungkan ulang</div>
 
-        <!-- Panel Kontrol Fitur -->
-        <div class="flex flex-wrap gap-2 items-center">
-            
-            <!-- FITUR GUEST: Pilih Materi Saved & Mode 1 Tim -->
-            <div id="guest-controls" class="flex flex-wrap gap-2 items-center bg-slate-900/60 p-1.5 rounded-lg border border-slate-700">
-                <div class="flex items-center gap-1.5 text-xs">
-                    <span class="text-slate-300 font-bold">📚 Materi:</span>
-                    <select id="guest-materi-select" onchange="guestChangeMateri()" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-amber-300 font-bold focus:outline-none">
-                        <option value="">-- Memuat Materi Cloud... --</option>
-                    </select>
-                </div>
-                <button id="btn-solo-mode" onclick="toggleSoloMode()" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold border border-emerald-500 text-emerald-100">
-                    👤 Main 1 Tim (Solo)
-                </button>
-            </div>
+  <div class="container">
+    <h1>🎁 Open The Box</h1>
 
-            <!-- Tombol Login / Logout Role Admin -->
-            <button id="btn-login-admin" onclick="openLoginModal()" class="px-3 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold border border-amber-500 flex items-center gap-1">
-                🔑 Login Admin
-            </button>
-            <button id="btn-logout-admin" onclick="logoutAdmin()" class="hidden px-3 py-1 bg-slate-700 hover:bg-slate-600 text-rose-300 rounded text-xs font-bold border border-slate-600">
-                🔒 Lock Admin
-            </button>
-
-            <!-- KONTROL KHUSUS ADMIN (Hidden untuk Guest) -->
-            <div id="admin-controls" class="hidden flex flex-wrap gap-2 items-center">
-                <div class="bg-slate-900/80 p-1 rounded-lg border border-slate-700 flex items-center gap-1.5 px-2 text-xs">
-                    <span class="text-slate-400 font-bold">Tim:</span>
-                    <button onclick="changeTeamCount(-1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">-</button>
-                    <span id="team-count-badge" class="font-extrabold text-white px-1">10</span>
-                    <button onclick="changeTeamCount(1)" class="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded font-bold text-amber-400">+</button>
-                </div>
-
-                <div class="flex gap-1">
-                    <button onclick="setupGame('FULL')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs font-bold">100% Soal</button>
-                    <button onclick="setupGame('STANDARD')" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold">Standard</button>
-                    <button onclick="setupGame('PARTY')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 rounded text-xs font-bold">Party</button>
-                </div>
-
-                <button onclick="openSettingsModal()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs font-bold border border-indigo-400 flex items-center gap-1">
-                    ⚙️ Bank Soal & Setting
-                </button>
-                <button onclick="confirmEndGame()" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-xs font-bold border border-rose-500 flex items-center gap-1 shadow-md">
-                    🛑 Reset Game
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Grid Kotak -->
-    <main id="boxes-grid" class="grid grid-cols-5 gap-3 my-auto max-w-5xl mx-auto w-full">
-        <!-- Generated by JS -->
-    </main>
-
-    <!-- Modal Login Admin -->
-    <div id="login-modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-slate-800 p-6 rounded-2xl max-w-sm w-full border border-slate-700 shadow-2xl text-center">
-            <h2 class="text-lg font-bold text-amber-400 mb-2">🔐 Akses Admin Game</h2>
-            <p class="text-xs text-slate-400 mb-4">Masukkan Passcode untuk membuka pengaturan & bank soal.</p>
-            
-            <input type="password" id="admin-pass-input" onkeydown="if(event.key === 'Enter') verifyAdminLogin()" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-center text-white font-bold mb-3 focus:outline-none focus:border-amber-500 tracking-widest text-lg" placeholder="••••••••">
-            
-            <p id="login-error-msg" class="hidden text-xs text-rose-400 font-bold mb-3">⚠️ Kode Sandi Salah!</p>
-
-            <div class="flex gap-2">
-                <button onclick="closeLoginModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-xs">Batal</button>
-                <button onclick="verifyAdminLogin()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold rounded-lg text-xs">Masuk</button>
-            </div>
-        </div>
+    <!-- Admin Input Area -->
+    <div id="adminPanel">
+      <h3>Input Soal (Fast Mode - 1 Baris 1 Soal):</h3>
+      <textarea id="rawQuestionsInput" placeholder="Soal 1&#10;Soal 2&#10;Soal 3"></textarea>
+      
+      <div class="controls">
+        <button class="btn-primary" onclick="setupNewGame()">🎲 Acak & Tebarkan Game Baru</button>
+        <button class="btn-warning" onclick="resetBoxesOnly()">🔄 Reset Kotak Saja (Skor Tetap)</button>
+        <button class="btn-danger" onclick="resetScoresOnly()">🧹 Reset Skor Tim Saja</button>
+      </div>
     </div>
 
-    <!-- Modal Soal / Bonus / Zonk -->
-    <div id="modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-slate-800 p-6 rounded-2xl max-w-xl w-full text-center border border-slate-700 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div id="timer" class="text-5xl font-black text-rose-500 mb-2">60</div>
-            <h3 id="modal-box-num" class="text-amber-400 text-sm font-bold uppercase tracking-wider mb-2">Kotak #</h3>
-            
-            <div id="modal-content" class="text-lg font-semibold mb-3 min-h-[80px] flex items-center justify-center bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 whitespace-pre-wrap text-left"></div>
-            
-            <!-- Kunci Jawaban -->
-            <div id="modal-answer-wrapper" class="hidden mb-4">
-                <button id="btn-toggle-key" onclick="toggleAnswerKey()" class="px-4 py-2 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 rounded-lg text-xs font-bold text-amber-300 transition-none cursor-pointer">
-                    👁️ Lihat Kunci Jawaban
-                </button>
-                <div id="modal-answer-key" class="hidden mt-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-sm font-medium text-left whitespace-pre-wrap leading-relaxed">
-                    🔑 <strong>Kunci Jawaban:</strong><br><span id="answer-key-text">-</span>
-                </div>
-            </div>
+    <!-- Timer -->
+    <div class="timer-display" id="timerDisplay">00</div>
 
-            <!-- Notifikasi Penjawab Aktif -->
-            <div id="modal-buzz-alert" class="hidden mb-4 p-3 bg-amber-600/20 border border-amber-500/50 rounded-xl text-amber-300 font-bold text-sm">
-                📢 GILIRAN MENJAWAB: <span id="buzz-team-name" class="text-amber-400 font-extrabold underline">Tim 1</span>
-            </div>
+    <!-- Papan Kotak -->
+    <div class="boxes-grid" id="boxesGrid"></div>
+  </div>
 
-            <!-- Panel Lempar Pertanyaan (Hidden di Solo Mode) -->
-            <div id="steal-team-selector" class="hidden mb-4 p-3 bg-slate-900/80 border border-amber-500/50 rounded-xl">
-                <p class="text-xs font-bold text-amber-400 mb-2">PILIH TIM YANG SIAP MEREBUT PERTANYAAN:</p>
-                <div id="steal-team-buttons" class="flex flex-wrap gap-1.5 justify-center max-h-36 overflow-y-auto"></div>
-            </div>
+  <script>
+    // ==========================================
+    // 1. FIREBASE INITIALIZATION
+    // ==========================================
+    const firebaseConfig = {
+      // Masukkan konfigurasi Firebase Anda di sini
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const gameRef = db.ref('currentGame');
 
-            <!-- Action Buttons Soal -->
-            <div id="modal-actions-soal" class="flex flex-wrap gap-2 justify-center">
-                <button onclick="processAnswer(true)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-sm">Benar (+Point)</button>
-                <button onclick="processAnswer(false)" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-lg font-bold text-sm">Salah (Denda)</button>
-                <button onclick="toggleStealSelector()" id="btn-steal-trigger" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-bold text-sm">⚡ Lempar Pertanyaan</button>
-                <button onclick="closeModal()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg font-bold text-sm">Tutup</button>
-            </div>
+    // Store lokal untuk menyimpan array soal saat ini
+    let currentQuestionsList = [];
 
-            <!-- Action Button Khusus Bonus / Zonk -->
-            <div id="modal-actions-instant" class="hidden flex justify-center">
-                <button onclick="closeModalInstant()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-extrabold text-sm shadow-lg">Lanjut Game ➡️</button>
-            </div>
-        </div>
-    </div>
+    // ==========================================
+    // 2. AUDIO FEEDBACK (WEB AUDIO API)
+    // ==========================================
+    let audioCtx = null;
 
-    <!-- Modal Setting & Bank Soal (Admin Only) -->
-    <div id="settings-modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-slate-800 p-6 rounded-2xl max-w-3xl w-full border border-slate-700 shadow-2xl max-h-[92vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
-                <h2 class="text-lg font-bold text-amber-400">⚙️ Bank Soal & Pengaturan Game</h2>
-                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
-            </div>
+    function playTickSound() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.05);
+    }
 
-            <div class="overflow-y-auto space-y-4 pr-2 flex-1 text-sm">
-                <!-- Simpan & Muat Materi Soal Database -->
-                <div class="bg-indigo-950/40 p-4 rounded-xl border border-indigo-500/30">
-                    <h3 class="text-xs font-extrabold text-indigo-300 uppercase tracking-wider mb-2">📁 Manajemen Bank Soal Cloud Database</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
-                        <input type="text" id="game-title-input" class="sm:col-span-2 bg-slate-900 border border-slate-600 rounded p-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-amber-400" placeholder="Judul Materi (Contoh: Kuis IPS Bab 1)">
-                        <button onclick="saveCurrentBank()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded transition-all flex items-center justify-center gap-1">
-                            💾 Simpan Ke Cloud
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-2 mt-2">
-                        <label class="text-xs text-slate-400 font-bold">Panggil Cloud Bank:</label>
-                        <select id="saved-banks-select" onchange="loadSelectedBank()" class="bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-bold flex-1">
-                            <option value="">-- Memuat Bank Soal Database... --</option>
-                        </select>
-                        <button onclick="deleteSelectedBank()" class="bg-rose-900/40 hover:bg-rose-600 text-rose-300 hover:text-white text-xs px-2.5 py-1.5 rounded border border-rose-500/30 transition-all">
-                            🗑️ Hapus
-                        </button>
-                    </div>
-                </div>
+    // ==========================================
+    // 3. FEATURE: RANDOMIZE (FISHER-YATES SHUFFLE)
+    // ==========================================
+    function shuffleArray(array) {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
 
-                <!-- Config Aturan Game -->
-                <div class="grid grid-cols-2 gap-3 bg-slate-900/50 p-4 rounded-xl border border-slate-700">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Jumlah Tim Peserta (1-20):</label>
-                        <input type="number" id="cfg-team-count" value="10" min="1" max="20" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-amber-400 font-bold text-lg">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Durasi Timer (Detik):</label>
-                        <input type="number" id="cfg-timer" value="60" min="15" max="120" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-white font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Poin Jawaban Benar:</label>
-                        <input type="number" id="cfg-points" value="100" step="10" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-white font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Denda Jawaban Salah:</label>
-                        <input type="number" id="cfg-penalty" value="0" step="10" class="w-full bg-slate-800 border border-slate-600 rounded p-1.5 text-white font-bold">
-                    </div>
-                    <div class="col-span-2 flex items-center gap-2">
-                        <input type="checkbox" id="cfg-show-key" checked class="w-4 h-4 text-amber-500 rounded">
-                        <label for="cfg-show-key" class="text-xs text-slate-300">Aktifkan Tombol Kunci Jawaban di Layar Host</label>
-                    </div>
-                </div>
+    // ==========================================
+    // 4. GAME LOGIC & RESET CONTROLS
+    // ==========================================
+    function setupNewGame() {
+      const rawText = document.getElementById('rawQuestionsInput').value.trim();
+      if (!rawText) {
+        alert("Silakan masukkan soal terlebih dahulu!");
+        return;
+      }
+      
+      const rawArray = rawText.split('\n').filter(q => q.trim() !== '');
+      currentQuestionsList = rawArray; // Simpan cache lokal
+      
+      // Acak urutan soal
+      const shuffledQuestions = shuffleArray(rawArray);
+      
+      const boxesData = shuffledQuestions.map((q, idx) => ({
+        id: idx + 1,
+        question: q,
+        isOpen: false
+      }));
 
-                <!-- Fast Input Textarea Soal -->
-                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block text-xs font-bold text-amber-400">💬 Input Soal Fast Mode (1 Baris = 1 Soal):</label>
-                        <span id="detected-count" class="text-xs bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 px-2 py-0.5 rounded font-bold">Terdeteksi: 0 Soal</span>
-                    </div>
-                    <p class="text-[11px] text-slate-400 mb-2">Format: <code class="text-amber-300">Pertanyaan | Kunci Jawaban</code></p>
-                    
-                    <textarea id="bulk-questions-input" oninput="updateDetectedCount()" rows="8" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-xs text-white font-mono focus:outline-none focus:border-amber-500" placeholder="Apa ibu kota Indonesia? | Nusantara&#10;Berapa 15 x 12? | 180"></textarea>
-                </div>
-            </div>
+      gameRef.child('boxes').set(boxesData);
+      gameRef.child('timer').set(10); // set timer default
+    }
 
-            <div class="mt-4 pt-3 border-t border-slate-700 flex justify-end gap-2">
-                <button onclick="saveSettings()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-sm">Simpan & Terbarkan Game</button>
-            </div>
-        </div>
-    </div>
+    // Fitur: Reset Kotak Saja (Skor Tim Tetap Dipertahankan)
+    function resetBoxesOnly() {
+      if (currentQuestionsList.length === 0) {
+        alert("Tidak ada data soal untuk di-reset!");
+        return;
+      }
+      
+      // Mengocok ulang soal yang tersimpan tanpa menghapus node 'teams'
+      const shuffled = shuffleArray(currentQuestionsList);
+      const boxesData = shuffled.map((q, idx) => ({
+        id: idx + 1,
+        question: q,
+        isOpen: false
+      }));
 
-    <!-- Papan Skor Tim -->
-    <footer class="bg-slate-800 p-4 rounded-xl mt-4 border border-slate-700">
-        <div id="scoreboard" class="flex justify-around overflow-x-auto gap-2 pb-1">
-            <!-- Rendered by JS -->
-        </div>
-        <div class="text-center text-[11px] text-slate-500 mt-2 font-medium">
-            © 2026 Xaverius Dwi. All rights reserved.
-        </div>
-    </footer>
+      gameRef.child('boxes').set(boxesData);
+      alert("Kotak telah diacak ulang! Skor tim tetap tersimpan.");
+    }
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCSOsd4zlP-JcS6jDgcSeNLkysuLUh6fsg",
-            authDomain: "open-box-game.firebaseapp.com",
-            databaseURL: "https://open-box-game-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "open-box-game",
-            storageBucket: "open-box-game.firebasestorage.app",
-            messagingSenderId: "270823181573",
-            appId: "1:270823181573:web:9c83bbaf6c759166ce3b6c"
+    // Fitur: Reset Skor Tim Saja
+    function resetScoresOnly() {
+      if (confirm("Apakah Anda yakin ingin mengosongkan skor semua tim?")) {
+        gameRef.child('teams').once('value', (snapshot) => {
+          const teams = snapshot.val();
+          if (teams) {
+            const resetTeams = {};
+            Object.keys(teams).forEach((teamKey) => {
+              resetTeams[teamKey] = {
+                ...teams[teamKey],
+                score: 0
+              };
+            });
+            gameRef.child('teams').set(resetTeams);
+            alert("Skor semua tim berhasil di-reset!");
+          }
+        });
+      }
+    }
+
+    // ==========================================
+    // 5. FIREBASE REALTIME LISTENERS & HANDLING
+    // ==========================================
+    
+    // Fitur: Handling Koneksi Terputus
+    function monitorFirebaseConnection() {
+      const connectedRef = db.ref(".info/connected");
+      const statusElement = document.getElementById("connectionStatus");
+
+      connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+          statusElement.style.display = "none";
+        } else {
+          statusElement.style.display = "block";
+        }
+      });
+    }
+
+    // Listener Timer (dengan Audio Feedback)
+    let previousTime = null;
+    gameRef.child('timer').on('value', (snap) => {
+      const timeLeft = snap.val() || 0;
+      document.getElementById('timerDisplay').innerText = timeLeft;
+      
+      // Bunyi tick hanya jika detik berubah dan tersisa <= 5 detik
+      if (timeLeft <= 5 && timeLeft > 0 && timeLeft !== previousTime) {
+        playTickSound();
+      }
+      previousTime = timeLeft;
+    });
+
+    // Listener Rendering Kotak Grid
+    gameRef.child('boxes').on('value', (snap) => {
+      const boxes = snap.val() || [];
+      const grid = document.getElementById('boxesGrid');
+      grid.innerHTML = '';
+
+      boxes.forEach((box, index) => {
+        const card = document.createElement('div');
+        card.className = `box-card ${box.isOpen ? 'opened' : ''}`;
+        card.innerText = box.isOpen ? '✓' : index + 1;
+        
+        card.onclick = () => {
+          if (!box.isOpen) {
+            gameRef.child(`boxes/${index}/isOpen`).set(true);
+            alert(`Kotak ${index + 1}: ${box.question}`);
+          }
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        // Obfuscated Security Matcher (Password123!)
-        const _secKey = [80, 97, 115, 115, 119, 111, 114, 100, 49, 50, 51, 33];
-        function checkAdminPasscode(input) {
-            if (!input || input.length !== _secKey.length) return false;
-            for (let i = 0; i < _secKey.length; i++) {
-                if (input.charCodeAt(i) !== _secKey[i]) return false;
-            }
-            return true;
-        }
-
-        let isAdmin = false;
-        let isSoloMode = false;
-        let cloudSavedBanks = {};
-
-        function updateRoleUI() {
-            const roleBadge = document.getElementById('user-role-badge');
-            const btnLogin = document.getElementById('btn-login-admin');
-            const btnLogout = document.getElementById('btn-logout-admin');
-            const adminControls = document.getElementById('admin-controls');
-
-            if (isAdmin) {
-                roleBadge.innerText = "Admin 🛠️";
-                roleBadge.className = "text-amber-400 font-extrabold uppercase";
-                btnLogin.classList.add('hidden');
-                btnLogout.classList.remove('hidden');
-                adminControls.classList.remove('hidden');
-            } else {
-                roleBadge.innerText = "Guest 👁️";
-                roleBadge.className = "text-slate-400 font-extrabold uppercase";
-                btnLogin.classList.remove('hidden');
-                btnLogout.classList.add('hidden');
-                adminControls.classList.add('hidden');
-            }
-        }
-
-        function openLoginModal() {
-            document.getElementById('login-modal').classList.remove('hidden');
-            document.getElementById('admin-pass-input').value = '';
-            document.getElementById('login-error-msg').classList.add('hidden');
-            document.getElementById('admin-pass-input').focus();
-        }
-
-        function closeLoginModal() {
-            document.getElementById('login-modal').classList.add('hidden');
-        }
-
-        function verifyAdminLogin() {
-            const inputPass = document.getElementById('admin-pass-input').value.trim();
-
-            if (checkAdminPasscode(inputPass)) {
-                isAdmin = true;
-                updateRoleUI();
-                closeLoginModal();
-            } else {
-                document.getElementById('login-error-msg').classList.remove('hidden');
-            }
-        }
-
-        function logoutAdmin() {
-            isAdmin = false;
-            updateRoleUI();
-        }
-
-        // Audio Effects
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                if (type === 'buzz') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3);
-                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-                } else if (type === 'correct') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
-                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.15);
-                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-                } else if (type === 'wrong') {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-                    osc.frequency.setValueAtTime(110, audioCtx.currentTime + 0.2);
-                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-                }
-            } catch(e) {}
-        }
-
-        let currentTitle = "Materi Default";
-        let rawQuestions = Array.from({length: 20}, (_, i) => ({
-            text: `Pertanyaan contoh nomor ${i + 1}?`,
-            answer: `Kunci Jawaban ${i + 1}`
-        }));
-
-        let config = { timerDuration: 60, correctPoints: 100, penaltyPoints: 0, teamCount: 10, showKey: true };
-        let activeBoxIndex = null;
-        let timerInterval = null;
-        let currentTurnTeam = 'team_1';
-        let answeringTeam = 'team_1';
-        let allTeamsData = {};
-
-        function setupGame(mode = 'STANDARD', customQuestions = null, customTitle = null, targetTeamCount = null) {
-            let questionsToUse = customQuestions || rawQuestions;
-            let titleToUse = customTitle || currentTitle;
-            let teamCountToUse = targetTeamCount !== null ? targetTeamCount : config.teamCount;
-
-            let totalInput = questionsToUse.length;
-            let boxes = [];
-            let soalCount = totalInput;
-            
-            if(mode === 'STANDARD') soalCount = Math.ceil(totalInput * 0.75);
-            if(mode === 'PARTY') soalCount = Math.ceil(totalInput * 0.60);
-
-            for(let i = 0; i < soalCount; i++) {
-                boxes.push({ type: 'SOAL', text: questionsToUse[i].text, answer: questionsToUse[i].answer, points: config.correctPoints, isOpened: false });
-            }
-
-            while(boxes.length < totalInput) {
-                const isBonus = Math.random() > 0.4;
-                if(isBonus) {
-                    boxes.push({ type: 'BONUS', text: '🎉 Bonus +50 Poin Gratis!', answer: '-', points: 50, isOpened: false });
-                } else {
-                    boxes.push({ type: 'ZONK', text: '💥 Zonk! Poin -30!', answer: '-', points: -30, isOpened: false });
-                }
-            }
-
-            boxes = boxes.sort(() => Math.random() - 0.5);
-
-            let teams = {};
-            for(let i = 1; i <= teamCountToUse; i++) {
-                teams[`team_${i}`] = { name: teamCountToUse === 1 ? 'Pemain Solo' : `Tim ${i}`, score: 0 };
-            }
-
-            config.teamCount = teamCountToUse;
-
-            db.ref('game_state').set({
-                title: titleToUse,
-                mode: mode,
-                boxes: boxes,
-                teams: teams,
-                activeBox: null,
-                timer: config.timerDuration,
-                stealActive: false,
-                currentTurn: 'team_1',
-                answeringTeam: 'team_1',
-                config: config
-            });
-        }
-
-        // 1. Realtime Listener Status Game
-        db.ref('game_state').on('value', snapshot => {
-            const data = snapshot.val();
-            if(!data) { 
-                setupGame(); 
-                return; 
-            }
-
-            currentTitle = data.title || "Materi Default";
-            currentTurnTeam = data.currentTurn || 'team_1';
-            answeringTeam = data.answeringTeam || currentTurnTeam;
-            allTeamsData = data.teams || {};
-            if(data.config) config = data.config;
-
-            isSoloMode = config.teamCount === 1;
-
-            document.getElementById('active-title-badge').innerText = currentTitle;
-            document.getElementById('current-mode').innerText = data.mode;
-            document.getElementById('team-count-badge').innerText = config.teamCount;
-            document.getElementById('total-teams-display').innerText = config.teamCount;
-            document.getElementById('current-turn-display').innerText = data.teams[currentTurnTeam]?.name || currentTurnTeam;
-            
-            const btnSolo = document.getElementById('btn-solo-mode');
-            if (isSoloMode) {
-                btnSolo.className = "px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-xs font-bold border border-amber-400 text-white";
-                btnSolo.innerText = "👥 Main Banyak Tim";
-            } else {
-                btnSolo.className = "px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold border border-emerald-500 text-emerald-100";
-                btnSolo.innerText = "👤 Main 1 Tim (Solo)";
-            }
-
-            renderGrid(data.boxes);
-            renderScoreboard(data.teams);
-
-            if(data.activeBox !== null && data.activeBox !== undefined) {
-                openModal(data.activeBox, data.boxes[data.activeBox], data.timer, data.stealActive, data.teams);
-            } else {
-                closeModalUI();
-            }
-        });
-
-        // 2. Realtime Listener Bank Soal Cloud Firebase (Guest & Admin Synced)
-        db.ref('saved_banks').on('value', snapshot => {
-            cloudSavedBanks = snapshot.val() || {};
-            renderMateriSelects();
-        });
-
-        function renderMateriSelects() {
-            const guestSelect = document.getElementById('guest-materi-select');
-            const adminSelect = document.getElementById('saved-banks-select');
-
-            guestSelect.innerHTML = '<option value="">-- Pilih Materi Game --</option>';
-            adminSelect.innerHTML = '<option value="">-- Pilih Judul Soal Tersimpan --</option>';
-
-            const keys = Object.keys(cloudSavedBanks);
-            if (keys.length === 0) {
-                guestSelect.innerHTML = '<option value="">(Belum ada materi di Cloud)</option>';
-                adminSelect.innerHTML = '<option value="">(Belum ada materi di Cloud)</option>';
-                return;
-            }
-
-            keys.forEach(safeTitleKey => {
-                const bank = cloudSavedBanks[safeTitleKey];
-                const displayTitle = bank.title || safeTitleKey;
-
-                // Guest Option
-                const gOpt = document.createElement('option');
-                gOpt.value = safeTitleKey;
-                gOpt.innerText = displayTitle;
-                if (displayTitle === currentTitle) gOpt.selected = true;
-                guestSelect.appendChild(gOpt);
-
-                // Admin Option
-                const aOpt = document.createElement('option');
-                aOpt.value = safeTitleKey;
-                aOpt.innerText = displayTitle;
-                adminSelect.appendChild(aOpt);
-            });
-        }
-
-        function guestChangeMateri() {
-            const safeTitleKey = document.getElementById('guest-materi-select').value;
-            if (!safeTitleKey || !cloudSavedBanks[safeTitleKey]) return;
-
-            const selectedBank = cloudSavedBanks[safeTitleKey];
-            const questions = selectedBank.questions || [];
-            if(questions.length > 0) {
-                rawQuestions = questions;
-                currentTitle = selectedBank.title;
-                setupGame('STANDARD', questions, selectedBank.title);
-            }
-        }
-
-        function toggleSoloMode() {
-            if (isSoloMode) {
-                setupGame('STANDARD', null, null, 10);
-            } else {
-                setupGame('STANDARD', null, null, 1);
-            }
-        }
-
-        function confirmEndGame() {
-            if (!isAdmin) return;
-            if (confirm("Apakah Anda yakin ingin mengakhiri game dan mereset skor?")) {
-                setupGame('STANDARD');
-            }
-        }
-
-        // Format Key Aman Firebase (Menghapus Karakter Terlarang . $ # [ ] /)
-        function sanitizeFirebaseKey(text) {
-            return text.replace(/[.#$\[\]\/]/g, "_");
-        }
-
-        function saveCurrentBank() {
-            if (!isAdmin) return;
-            const titleInput = document.getElementById('game-title-input').value.trim();
-            if (!titleInput) {
-                alert("Masukkan Judul Materi terlebih dahulu!");
-                return;
-            }
-
-            const val = document.getElementById('bulk-questions-input').value.trim();
-            const lines = val ? val.split('\n').filter(line => line.trim() !== '') : [];
-
-            if (lines.length === 0) {
-                alert("Kotak teks soal tidak boleh kosong!");
-                return;
-            }
-
-            const questions = lines.map(line => {
-                const parts = line.split('|');
-                return {
-                    text: parts[0].trim(),
-                    answer: parts[1] ? parts[1].trim() : '-'
-                };
-            });
-
-            const safeKey = sanitizeFirebaseKey(titleInput);
-            
-            // Simpan Permanen ke Firebase Realtime Database
-            db.ref(`saved_banks/${safeKey}`).set({
-                title: titleInput,
-                questions: questions,
-                updatedAt: Date.now()
-            }).then(() => {
-                currentTitle = titleInput;
-                alert(`Materi "${titleInput}" BERHASIL tersimpan ke Database Cloud! Guest sekarang bisa melihat materi ini.`);
-            }).catch(err => {
-                alert("Gagal menyimpan ke database: " + err.message);
-            });
-        }
-
-        function loadSelectedBank() {
-            const safeKey = document.getElementById('saved-banks-select').value;
-            if (!safeKey || !cloudSavedBanks[safeKey]) return;
-
-            const selectedBank = cloudSavedBanks[safeKey];
-            document.getElementById('game-title-input').value = selectedBank.title;
-            
-            const textVal = selectedBank.questions.map(q => q.answer && q.answer !== '-' ? `${q.text} | ${q.answer}` : q.text).join('\n');
-            document.getElementById('bulk-questions-input').value = textVal;
-            updateDetectedCount();
-            currentTitle = selectedBank.title;
-        }
-
-        function deleteSelectedBank() {
-            if (!isAdmin) return;
-            const safeKey = document.getElementById('saved-banks-select').value;
-            if (!safeKey || !cloudSavedBanks[safeKey]) {
-                alert("Pilih judul materi cloud yang ingin dihapus!");
-                return;
-            }
-
-            const displayTitle = cloudSavedBanks[safeKey].title;
-            if (confirm(`Hapus bank soal "${displayTitle}" secara permanen dari Cloud Database?`)) {
-                db.ref(`saved_banks/${safeKey}`).remove().then(() => {
-                    document.getElementById('game-title-input').value = '';
-                    alert(`Bank soal "${displayTitle}" berhasil dihapus.`);
-                });
-            }
-        }
-
-        function changeTeamCount(delta) {
-            if (!isAdmin) return;
-            let newCount = config.teamCount + delta;
-            if (newCount >= 1 && newCount <= 20) {
-                config.teamCount = newCount;
-                setupGame();
-            }
-        }
-
-        function renderGrid(boxes) {
-            const grid = document.getElementById('boxes-grid');
-            grid.innerHTML = '';
-            
-            if(boxes.length > 30) grid.className = "grid grid-cols-8 gap-2 my-auto max-w-6xl mx-auto w-full";
-            else if(boxes.length > 20) grid.className = "grid grid-cols-6 gap-2.5 my-auto max-w-5xl mx-auto w-full";
-            else grid.className = "grid grid-cols-5 gap-3 my-auto max-w-5xl mx-auto w-full";
-
-            boxes.forEach((box, index) => {
-                const btn = document.createElement('button');
-                btn.className = `h-20 rounded-xl font-extrabold text-xl transition-all shadow-md flex items-center justify-center ${
-                    box.isOpened 
-                    ? 'bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed' 
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-900 border-b-4 border-amber-700 active:translate-y-1'
-                }`;
-                btn.innerText = box.isOpened ? '✓' : index + 1;
-                btn.onclick = () => selectBox(index);
-                grid.appendChild(btn);
-            });
-        }
-
-        function renderScoreboard(teams) {
-            const board = document.getElementById('scoreboard');
-            board.innerHTML = '';
-            Object.keys(teams).forEach(key => {
-                const team = teams[key];
-                const isCurrent = key === currentTurnTeam;
-                const isAnswering = key === answeringTeam;
-                const div = document.createElement('div');
-                div.className = `p-2 rounded-lg text-center min-w-[85px] border ${
-                    isAnswering ? 'bg-amber-500/30 border-amber-400 ring-2 ring-amber-400/50' : 
-                    isCurrent ? 'bg-indigo-500/20 border-indigo-500' : 'bg-slate-700 border-slate-600'
-                }`;
-                div.innerHTML = `<div class="text-xs ${isAnswering || isCurrent ? 'text-amber-400 font-extrabold' : 'text-slate-400 font-bold'}">${team.name}</div><div class="text-lg font-black text-amber-400">${team.score}</div>`;
-                board.appendChild(div);
-            });
-        }
-
-        function selectBox(index) {
-            activeBoxIndex = index;
-            answeringTeam = currentTurnTeam;
-            
-            db.ref('game_state/boxes').get().then(snap => {
-                const boxes = snap.val();
-                const selectedBox = boxes[index];
-
-                db.ref(`game_state/boxes/${index}/isOpened`).set(true);
-                db.ref('game_state/activeBox').set(index);
-                db.ref('game_state/stealActive').set(false);
-                db.ref('game_state/answeringTeam').set(currentTurnTeam);
-
-                if (selectedBox.type === 'BONUS' || selectedBox.type === 'ZONK') {
-                    db.ref(`game_state/teams/${currentTurnTeam}/score`).get().then(scoreSnap => {
-                        let curScore = scoreSnap.val() || 0;
-                        let updatedScore = curScore + selectedBox.points;
-                        db.ref(`game_state/teams/${currentTurnTeam}/score`).set(updatedScore);
-                        playSound(selectedBox.type === 'BONUS' ? 'correct' : 'wrong');
-                    });
-                } else {
-                    clearInterval(timerInterval);
-                    db.ref('game_state/timer').set(config.timerDuration);
-                    let timeLeft = config.timerDuration;
-                    timerInterval = setInterval(() => {
-                        timeLeft--;
-                        db.ref('game_state/timer').set(timeLeft);
-                        if(timeLeft <= 0) {
-                            clearInterval(timerInterval);
-                            playSound('buzz');
-                        }
-                    }, 1000);
-                }
-            });
-        }
-
-        function openModal(index, box, timerValue, isSteal, teams) {
-            document.getElementById('modal').classList.remove('hidden');
-            document.getElementById('modal-box-num').innerText = `KOTAK NOMOR ${index + 1} (${box.type})`;
-            document.getElementById('modal-content').innerText = box.text;
-
-            const timerEl = document.getElementById('timer');
-            const actionsSoal = document.getElementById('modal-actions-soal');
-            const actionsInstant = document.getElementById('modal-actions-instant');
-            const wrapperKey = document.getElementById('modal-answer-wrapper');
-            const alertEl = document.getElementById('modal-buzz-alert');
-
-            if (box.type === 'BONUS' || box.type === 'ZONK') {
-                timerEl.classList.add('hidden');
-                actionsSoal.classList.add('hidden');
-                wrapperKey.classList.add('hidden');
-                alertEl.classList.add('hidden');
-                actionsInstant.classList.remove('hidden');
-                document.getElementById('steal-team-selector').classList.add('hidden');
-            } else {
-                timerEl.classList.remove('hidden');
-                timerEl.innerText = timerValue;
-                actionsSoal.classList.remove('hidden');
-                actionsInstant.classList.add('hidden');
-
-                if (config.showKey && box.answer && box.answer !== '-') {
-                    document.getElementById('answer-key-text').innerText = box.answer;
-                    wrapperKey.classList.remove('hidden');
-                } else {
-                    wrapperKey.classList.add('hidden');
-                }
-
-                document.getElementById('buzz-team-name').innerText = teams[answeringTeam]?.name || answeringTeam;
-                alertEl.classList.remove('hidden');
-
-                const btnSteal = document.getElementById('btn-steal-trigger');
-                if (isSoloMode) btnSteal.classList.add('hidden');
-                else btnSteal.classList.remove('hidden');
-            }
-        }
-
-        function closeModalInstant() {
-            nextTurn();
-            closeModal();
-        }
-
-        function toggleAnswerKey() {
-            const keyContent = document.getElementById('modal-answer-key');
-            const btnToggle = document.getElementById('btn-toggle-key');
-            if (keyContent.classList.contains('hidden')) {
-                keyContent.classList.remove('hidden');
-                btnToggle.innerText = '🙈 Sembunyikan Kunci Jawaban';
-            } else {
-                keyContent.classList.add('hidden');
-                btnToggle.innerText = '👁️ Lihat Kunci Jawaban';
-            }
-        }
-
-        function toggleStealSelector() {
-            if (isSoloMode) return;
-            const selector = document.getElementById('steal-team-selector');
-            if (!selector.classList.contains('hidden')) {
-                selector.classList.add('hidden');
-                return;
-            }
-
-            const btnContainer = document.getElementById('steal-team-buttons');
-            btnContainer.innerHTML = '';
-            
-            Object.keys(allTeamsData).forEach(teamKey => {
-                if (teamKey !== answeringTeam) {
-                    const btn = document.createElement('button');
-                    btn.className = "px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded font-bold text-xs transition-colors";
-                    btn.innerText = allTeamsData[teamKey].name;
-                    btn.onclick = () => assignStealTeam(teamKey);
-                    btnContainer.appendChild(btn);
-                }
-            });
-
-            selector.classList.remove('hidden');
-            playSound('buzz');
-        }
-
-        function assignStealTeam(teamKey) {
-            answeringTeam = teamKey;
-            db.ref('game_state/answeringTeam').set(teamKey);
-            db.ref('game_state/stealActive').set(true);
-            document.getElementById('steal-team-selector').classList.add('hidden');
-            document.getElementById('buzz-team-name').innerText = allTeamsData[teamKey]?.name || teamKey;
-        }
-
-        function processAnswer(isCorrect) {
-            clearInterval(timerInterval);
-            db.ref(`game_state/teams/${answeringTeam}/score`).get().then(snap => {
-                let currentScore = snap.val() || 0;
-                let newScore = isCorrect ? currentScore + config.correctPoints : currentScore - config.penaltyPoints;
-                db.ref(`game_state/teams/${answeringTeam}/score`).set(newScore);
-                playSound(isCorrect ? 'correct' : 'wrong');
-                nextTurn();
-                closeModal();
-            });
-        }
-
-        function nextTurn() {
-            if (isSoloMode) return;
-            let currentNum = parseInt(currentTurnTeam.replace('team_', ''));
-            let nextNum = (currentNum % config.teamCount) + 1;
-            db.ref('game_state/currentTurn').set(`team_${nextNum}`);
-            db.ref('game_state/answeringTeam').set(`team_${nextNum}`);
-        }
-
-        function closeModal() {
-            clearInterval(timerInterval);
-            document.getElementById('steal-team-selector').classList.add('hidden');
-            document.getElementById('modal-answer-key').classList.add('hidden');
-            document.getElementById('btn-toggle-key').innerText = '👁️ Lihat Kunci Jawaban';
-            db.ref('game_state/activeBox').set(null);
-            closeModalUI();
-        }
-
-        function closeModalUI() {
-            document.getElementById('modal').classList.add('hidden');
-        }
-
-        function updateDetectedCount() {
-            const val = document.getElementById('bulk-questions-input').value.trim();
-            const lines = val ? val.split('\n').filter(line => line.trim() !== '') : [];
-            document.getElementById('detected-count').innerText = `Terdeteksi: ${lines.length} Soal`;
-        }
-
-        function openSettingsModal() {
-            if (!isAdmin) return;
-            document.getElementById('settings-modal').classList.remove('hidden');
-            document.getElementById('game-title-input').value = currentTitle;
-            document.getElementById('cfg-timer').value = config.timerDuration;
-            document.getElementById('cfg-points').value = config.correctPoints;
-            document.getElementById('cfg-penalty').value = config.penaltyPoints;
-            document.getElementById('cfg-team-count').value = config.teamCount;
-            document.getElementById('cfg-show-key').checked = config.showKey;
-
-            const textVal = rawQuestions.map(q => q.answer && q.answer !== '-' ? `${q.text} | ${q.answer}` : q.text).join('\n');
-            document.getElementById('bulk-questions-input').value = textVal;
-            updateDetectedCount();
-        }
-
-        function closeSettingsModal() {
-            document.getElementById('settings-modal').classList.add('hidden');
-        }
-
-        function saveSettings() {
-            if (!isAdmin) return;
-            const titleInput = document.getElementById('game-title-input').value.trim();
-            currentTitle = titleInput || "Materi Tanpa Judul";
-
-            config.timerDuration = parseInt(document.getElementById('cfg-timer').value) || 60;
-            config.correctPoints = parseInt(document.getElementById('cfg-points').value) || 100;
-            config.penaltyPoints = parseInt(document.getElementById('cfg-penalty').value) || 0;
-            config.teamCount = parseInt(document.getElementById('cfg-team-count').value) || 10;
-            config.showKey = document.getElementById('cfg-show-key').checked;
-
-            const val = document.getElementById('bulk-questions-input').value.trim();
-            const lines = val ? val.split('\n').filter(line => line.trim() !== '') : [];
-
-            if (lines.length === 0) {
-                alert("Masukkan minimal 1 soal di kotak teks!");
-                return;
-            }
-
-            rawQuestions = lines.map(line => {
-                const parts = line.split('|');
-                return {
-                    text: parts[0].trim(),
-                    answer: parts[1] ? parts[1].trim() : '-'
-                };
-            });
-
-            closeSettingsModal();
-            setupGame();
-            alert(`Game "${currentTitle}" siap dimainkan!`);
-        }
-
-        // Init UI Role awal sebagai Guest
-        updateRoleUI();
-    </script>
+        grid.appendChild(card);
+      });
+    });
+
+    // Jalankan pemantau koneksi saat pertama kali dimuat
+    monitorFirebaseConnection();
+  </script>
 </body>
 </html>
