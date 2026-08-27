@@ -33,7 +33,7 @@
                 <div class="flex items-center gap-1.5 text-xs">
                     <span class="text-slate-300 font-bold">📚 Materi:</span>
                     <select id="guest-materi-select" onchange="guestChangeMateri()" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-amber-300 font-bold focus:outline-none">
-                        <option value="">-- Pilih Materi Game --</option>
+                        <option value="">-- Memuat Materi Cloud... --</option>
                     </select>
                 </div>
                 <button id="btn-solo-mode" onclick="toggleSoloMode()" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 rounded text-xs font-bold border border-emerald-500 text-emerald-100">
@@ -149,19 +149,19 @@
             </div>
 
             <div class="overflow-y-auto space-y-4 pr-2 flex-1 text-sm">
-                <!-- Simpan & Muat Materi Soal -->
+                <!-- Simpan & Muat Materi Soal Database -->
                 <div class="bg-indigo-950/40 p-4 rounded-xl border border-indigo-500/30">
-                    <h3 class="text-xs font-extrabold text-indigo-300 uppercase tracking-wider mb-2">📁 Manajemen Bank Soal / Materi Saved</h3>
+                    <h3 class="text-xs font-extrabold text-indigo-300 uppercase tracking-wider mb-2">📁 Manajemen Bank Soal Cloud Database</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
                         <input type="text" id="game-title-input" class="sm:col-span-2 bg-slate-900 border border-slate-600 rounded p-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-amber-400" placeholder="Judul Materi (Contoh: Kuis IPS Bab 1)">
-                        <button onclick="saveCurrentBank()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded transition-all">
-                            💾 Simpan Materi Ini
+                        <button onclick="saveCurrentBank()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded transition-all flex items-center justify-center gap-1">
+                            💾 Simpan Ke Cloud
                         </button>
                     </div>
                     <div class="flex items-center gap-2 mt-2">
-                        <label class="text-xs text-slate-400 font-bold">Panggil Materi Saved:</label>
+                        <label class="text-xs text-slate-400 font-bold">Panggil Cloud Bank:</label>
                         <select id="saved-banks-select" onchange="loadSelectedBank()" class="bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-bold flex-1">
-                            <option value="">-- Pilih Judul Soal Tersimpan --</option>
+                            <option value="">-- Memuat Bank Soal Database... --</option>
                         </select>
                         <button onclick="deleteSelectedBank()" class="bg-rose-900/40 hover:bg-rose-600 text-rose-300 hover:text-white text-xs px-2.5 py-1.5 rounded border border-rose-500/30 transition-all">
                             🗑️ Hapus
@@ -197,7 +197,7 @@
                 <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
                     <div class="flex justify-between items-center mb-1">
                         <label class="block text-xs font-bold text-amber-400">💬 Input Soal Fast Mode (1 Baris = 1 Soal):</label>
-                        <span id="detected-count" class="text-xs bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 px-2 py-0.5 rounded font-bold">Terdeteksi: 20 Soal</span>
+                        <span id="detected-count" class="text-xs bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 px-2 py-0.5 rounded font-bold">Terdeteksi: 0 Soal</span>
                     </div>
                     <p class="text-[11px] text-slate-400 mb-2">Format: <code class="text-amber-300">Pertanyaan | Kunci Jawaban</code></p>
                     
@@ -206,7 +206,7 @@
             </div>
 
             <div class="mt-4 pt-3 border-t border-slate-700 flex justify-end gap-2">
-                <button onclick="saveSettings()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-sm">Simpan & Reset Match Baru</button>
+                <button onclick="saveSettings()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold text-sm">Simpan & Terbarkan Game</button>
             </div>
         </div>
     </div>
@@ -234,7 +234,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        
+        // Obfuscated Security Matcher (Password123!)
         const _secKey = [80, 97, 115, 115, 119, 111, 114, 100, 49, 50, 51, 33];
         function checkAdminPasscode(input) {
             if (!input || input.length !== _secKey.length) return false;
@@ -246,6 +246,7 @@
 
         let isAdmin = false;
         let isSoloMode = false;
+        let cloudSavedBanks = {};
 
         function updateRoleUI() {
             const roleBadge = document.getElementById('user-role-badge');
@@ -266,7 +267,6 @@
                 btnLogout.classList.add('hidden');
                 adminControls.classList.add('hidden');
             }
-            renderGuestMateriOptions();
         }
 
         function openLoginModal() {
@@ -387,7 +387,7 @@
             });
         }
 
-        // Realtime Listener
+        // 1. Realtime Listener Status Game
         db.ref('game_state').on('value', snapshot => {
             const data = snapshot.val();
             if(!data) { 
@@ -428,37 +428,55 @@
             }
         });
 
-        // Fitur Guest: Pilih Materi Saved & Mode 1 Tim
-        function getSavedBanks() {
-            return JSON.parse(localStorage.getItem('open_box_saved_banks') || '{}');
-        }
+        // 2. Realtime Listener Bank Soal Cloud Firebase (Guest & Admin Synced)
+        db.ref('saved_banks').on('value', snapshot => {
+            cloudSavedBanks = snapshot.val() || {};
+            renderMateriSelects();
+        });
 
-        function renderGuestMateriOptions() {
-            const banks = getSavedBanks();
-            const select = document.getElementById('guest-materi-select');
-            select.innerHTML = '<option value="">-- Pilih Materi Game --</option>';
-            Object.keys(banks).forEach(title => {
-                const opt = document.createElement('option');
-                opt.value = title;
-                opt.innerText = title;
-                if (title === currentTitle) opt.selected = true;
-                select.appendChild(opt);
+        function renderMateriSelects() {
+            const guestSelect = document.getElementById('guest-materi-select');
+            const adminSelect = document.getElementById('saved-banks-select');
+
+            guestSelect.innerHTML = '<option value="">-- Pilih Materi Game --</option>';
+            adminSelect.innerHTML = '<option value="">-- Pilih Judul Soal Tersimpan --</option>';
+
+            const keys = Object.keys(cloudSavedBanks);
+            if (keys.length === 0) {
+                guestSelect.innerHTML = '<option value="">(Belum ada materi di Cloud)</option>';
+                adminSelect.innerHTML = '<option value="">(Belum ada materi di Cloud)</option>';
+                return;
+            }
+
+            keys.forEach(safeTitleKey => {
+                const bank = cloudSavedBanks[safeTitleKey];
+                const displayTitle = bank.title || safeTitleKey;
+
+                // Guest Option
+                const gOpt = document.createElement('option');
+                gOpt.value = safeTitleKey;
+                gOpt.innerText = displayTitle;
+                if (displayTitle === currentTitle) gOpt.selected = true;
+                guestSelect.appendChild(gOpt);
+
+                // Admin Option
+                const aOpt = document.createElement('option');
+                aOpt.value = safeTitleKey;
+                aOpt.innerText = displayTitle;
+                adminSelect.appendChild(aOpt);
             });
         }
 
         function guestChangeMateri() {
-            const title = document.getElementById('guest-materi-select').value;
-            if (!title) return;
+            const safeTitleKey = document.getElementById('guest-materi-select').value;
+            if (!safeTitleKey || !cloudSavedBanks[safeTitleKey]) return;
 
-            const banks = getSavedBanks();
-            if (banks[title]) {
-                const questions = banks[title].map(line => {
-                    const parts = line.split('|');
-                    return { text: parts[0].trim(), answer: parts[1] ? parts[1].trim() : '-' };
-                });
+            const selectedBank = cloudSavedBanks[safeTitleKey];
+            const questions = selectedBank.questions || [];
+            if(questions.length > 0) {
                 rawQuestions = questions;
-                currentTitle = title;
-                setupGame('STANDARD', questions, title);
+                currentTitle = selectedBank.title;
+                setupGame('STANDARD', questions, selectedBank.title);
             }
         }
 
@@ -477,6 +495,11 @@
             }
         }
 
+        // Format Key Aman Firebase (Menghapus Karakter Terlarang . $ # [ ] /)
+        function sanitizeFirebaseKey(text) {
+            return text.replace(/[.#$\[\]\/]/g, "_");
+        }
+
         function saveCurrentBank() {
             if (!isAdmin) return;
             const titleInput = document.getElementById('game-title-input').value.trim();
@@ -493,57 +516,56 @@
                 return;
             }
 
-            const banks = getSavedBanks();
-            banks[titleInput] = lines;
-            localStorage.setItem('open_box_saved_banks', JSON.stringify(banks));
-            currentTitle = titleInput;
+            const questions = lines.map(line => {
+                const parts = line.split('|');
+                return {
+                    text: parts[0].trim(),
+                    answer: parts[1] ? parts[1].trim() : '-'
+                };
+            });
 
-            renderBankOptions();
-            renderGuestMateriOptions();
-            document.getElementById('saved-banks-select').value = titleInput;
-            alert(`Bank Soal "${titleInput}" berhasil disimpan!`);
-        }
-
-        function renderBankOptions() {
-            const banks = getSavedBanks();
-            const select = document.getElementById('saved-banks-select');
-            select.innerHTML = '<option value="">-- Pilih Judul Soal Tersimpan --</option>';
-            Object.keys(banks).forEach(title => {
-                const opt = document.createElement('option');
-                opt.value = title;
-                opt.innerText = title;
-                select.appendChild(opt);
+            const safeKey = sanitizeFirebaseKey(titleInput);
+            
+            // Simpan Permanen ke Firebase Realtime Database
+            db.ref(`saved_banks/${safeKey}`).set({
+                title: titleInput,
+                questions: questions,
+                updatedAt: Date.now()
+            }).then(() => {
+                currentTitle = titleInput;
+                alert(`Materi "${titleInput}" BERHASIL tersimpan ke Database Cloud! Guest sekarang bisa melihat materi ini.`);
+            }).catch(err => {
+                alert("Gagal menyimpan ke database: " + err.message);
             });
         }
 
         function loadSelectedBank() {
-            const title = document.getElementById('saved-banks-select').value;
-            if (!title) return;
+            const safeKey = document.getElementById('saved-banks-select').value;
+            if (!safeKey || !cloudSavedBanks[safeKey]) return;
 
-            const banks = getSavedBanks();
-            if (banks[title]) {
-                document.getElementById('game-title-input').value = title;
-                document.getElementById('bulk-questions-input').value = banks[title].join('\n');
-                updateDetectedCount();
-                currentTitle = title;
-            }
+            const selectedBank = cloudSavedBanks[safeKey];
+            document.getElementById('game-title-input').value = selectedBank.title;
+            
+            const textVal = selectedBank.questions.map(q => q.answer && q.answer !== '-' ? `${q.text} | ${q.answer}` : q.text).join('\n');
+            document.getElementById('bulk-questions-input').value = textVal;
+            updateDetectedCount();
+            currentTitle = selectedBank.title;
         }
 
         function deleteSelectedBank() {
             if (!isAdmin) return;
-            const title = document.getElementById('saved-banks-select').value;
-            if (!title) {
-                alert("Pilih judul materi yang ingin dihapus!");
+            const safeKey = document.getElementById('saved-banks-select').value;
+            if (!safeKey || !cloudSavedBanks[safeKey]) {
+                alert("Pilih judul materi cloud yang ingin dihapus!");
                 return;
             }
 
-            if (confirm(`Hapus bank soal "${title}" dari penyimpanan?`)) {
-                const banks = getSavedBanks();
-                delete banks[title];
-                localStorage.setItem('open_box_saved_banks', JSON.stringify(banks));
-                renderBankOptions();
-                renderGuestMateriOptions();
-                document.getElementById('game-title-input').value = '';
+            const displayTitle = cloudSavedBanks[safeKey].title;
+            if (confirm(`Hapus bank soal "${displayTitle}" secara permanen dari Cloud Database?`)) {
+                db.ref(`saved_banks/${safeKey}`).remove().then(() => {
+                    document.getElementById('game-title-input').value = '';
+                    alert(`Bank soal "${displayTitle}" berhasil dihapus.`);
+                });
             }
         }
 
@@ -664,7 +686,6 @@
                 document.getElementById('buzz-team-name').innerText = teams[answeringTeam]?.name || answeringTeam;
                 alertEl.classList.remove('hidden');
 
-                // Sembunyikan tombol lempar pertanyaan jika hanya 1 tim (Solo mode)
                 const btnSteal = document.getElementById('btn-steal-trigger');
                 if (isSoloMode) btnSteal.classList.add('hidden');
                 else btnSteal.classList.remove('hidden');
@@ -762,7 +783,6 @@
 
         function openSettingsModal() {
             if (!isAdmin) return;
-            renderBankOptions();
             document.getElementById('settings-modal').classList.remove('hidden');
             document.getElementById('game-title-input').value = currentTitle;
             document.getElementById('cfg-timer').value = config.timerDuration;
